@@ -1,0 +1,232 @@
+:root {
+  --color-primary-dark: #121212;
+  --color-primary-accent: #038C83;
+  --color-primary-accent-hover: #026B63;
+  --color-white: #ffffff;
+  --color-grid-line: rgba(255, 255, 255, 0.1);
+  --font-lora: 'Lora', serif;
+  --font-noto: 'Noto Sans', sans-serif;
+}
+
+/* -------- DASHBOARD LAYOUT -------- */
+ .dashboard {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  height: calc(100vh - 60px); /* lock layout to viewport minus navbar so right panel stays fixed */
+ }
+
+/* -------- LEFT: IA REPORT SECTION -------- */
+.ia-report-section {
+  background-color: var(--color-surface);
+  padding: 4rem 2rem 2rem; /* pequeño offset top para no chocar con navbar sticky */
+  overflow-y: auto; /* own scroll for report */
+  border-right: 1px solid var(--color-grid-line);
+  height: 100%; /* fill the dashboard height so body doesn't scroll */
+}
+
+.ia-report-section h2 {
+  font-family: var(--font-lora);
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.ia-report-section .plant-name {
+  color: var(--color-primary-accent);
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.ia-report-section ul {
+  padding-left: 1rem;
+  line-height: 1.6;
+}
+
+/* -------- RIGHT: MAP & INPUTS -------- */
+.map-section {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1rem;
+  height: 100%; /* keep map column fixed height matching viewport */
+}
+
+.map-placeholder {
+  flex-grow: 1;
+  border: 1px solid var(--color-grid-line);
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: stretch;
+  position: relative;
+  overflow: hidden; /* ensure map doesn't overflow its container */
+  /* create a top-safe offset so map tiles don't visually overlap navbar controls */
+  padding-top: 4px;
+}
+
+/* Input groups */
+.input-group {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+.field label {
+  font-size: 0.85rem;
+  margin-bottom: 0.3rem;
+  color: var(--Grey2);
+}
+
+.field input, .field select {
+  background-color: transparent;
+  border: 1px solid var(--Grey2);
+  border-radius: 4px;
+  padding: 0.5rem 0.7rem;
+  color: var(--color-white);
+  font-size: 0.9rem;
+  /* Hint the browser to use dark popover styling when possible */
+  color-scheme: dark;
+}
+
+.field option {
+  background-color: var(--color-primary-dark);
+  color: var(--color-white);
+  font-size: 0.9rem;
+}
+
+.field input::placeholder {
+  color: var(--Grey2);
+}
+
+/* Buttons */
+.btn-accent {
+  background-color: var(--color-primary-accent);
+  color: var(--color-white);
+  border: none;
+  border-radius: 6px;
+  padding: 0.55rem 1rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-accent:hover {
+  background-color: var(--color-primary-accent-hover);
+}
+
+.btn-outline {
+  background-color: transparent;
+  border: 1px solid var(--color-white);
+  border-radius: 6px;
+  color: var(--color-white);
+  padding: 0.55rem 1rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-outline:hover {
+  background-color: var(--color-white);
+  color: var(--color-primary-dark);
+}
+
+/* Markdown styling (basic) */
+.markdown-body h2 { font-family: var(--font-lora); font-size: 1.5rem; margin: 1rem 0 1rem; color: var(--color-text-primary); }
+.markdown-body h3 { font-family: var(--font-lora); font-size: 1.2rem; margin: 1rem 0 0.5rem; color: var(--color-text-primary); }
+.markdown-body h4, .markdown-body h5, .markdown-body h6 { font-family: var(--font-lora); margin: 0.75rem 0 0.5rem; color: var(--color-text-primary); font-size: 1rem; }
+.markdown-body p { margin: 1rem 0; color: var(--color-text-secondary); }
+.markdown-body ul, .markdown-body ol { padding-left: 1.25rem; margin: 0.5rem 0; color: var(--color-text-secondary); }
+.markdown-body li { margin: 0.4rem 0; color: var(--color-text-secondary); }
+.markdown-body table { width: 100%; border-collapse: collapse; margin: 0.75rem 0; }
+.markdown-body th, .markdown-body td { border: 1px solid var(--color-grid-line); padding: 8px; }
+.markdown-body th { background: rgba(0,0,0,0.06); }
+.markdown-body strong { color: var(--color-text-primary); }
+.markdown-body em { color: var(--color-text-secondary); }
+
+body.light-theme .markdown-body th { background: rgba(0,0,0,0.05); }
+
+/* Loading UI */
+.loading-wrap { display: flex; align-items: center; gap: 14px; }
+.spinner {
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 3px solid rgba(255,255,255,0.15);
+  border-top-color: var(--color-primary-accent);
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.didyouknow { margin-top: 8px; color: var(--color-text-secondary); font-size: 0.95rem; }
+.didyouknow .label { color: var(--color-primary-accent); font-weight: 700; margin-right: 6px; }
+
+/* Scrollbar personalizado */
+.ia-report-section::-webkit-scrollbar {
+  width: 6px;
+}
+
+.ia-report-section::-webkit-scrollbar-thumb {
+  background-color: var(--color-primary-accent);
+  border-radius: 10px;
+}
+
+/* -------- RESPONSIVE DESIGN -------- */
+@media (max-width: 1024px) {
+  .dashboard {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+    height: auto;
+  }
+
+  .map-section {
+    order: -1;
+    position: static; /* deja de ser sticky */
+    height: auto;
+    padding: 1.5rem;
+  }
+
+  .map-placeholder {
+    height: 250px; /* tamaño fijo más razonable para móviles */
+    overflow: hidden;
+    padding-top: 4px; /* match desktop safe offset */
+  }
+
+  .ia-report-section {
+    order: 2;
+    border-right: none;
+    border-top: 1px solid var(--color-grid-line);
+    overflow-y: visible; /* sin scroll interno */
+    padding: 1.5rem;
+  }
+}
+
+/* -------- Light theme overrides specific to Dashboard -------- */
+body.light-theme .ia-report-section {
+  /* Use the base background (#F5F1F3) for the report column in light mode */
+  background-color: var(--color-base);
+}
+
+body.light-theme .field input,
+body.light-theme .field select {
+  color: #121212;
+  border-color: rgba(0,0,0,0.25);
+  color-scheme: light;
+}
+
+body.light-theme .btn-outline {
+  border-color: #000000;
+  color: #000000;
+}
+
+body.light-theme .btn-outline:hover {
+  background-color: #000000;
+  color: #ffffff;
+}
+
+body.light-theme .spinner {
+  border: 3px solid rgba(0,0,0,0.12);
+  border-top-color: var(--color-primary-accent);
+}
