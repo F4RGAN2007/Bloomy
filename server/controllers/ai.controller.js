@@ -58,6 +58,26 @@ Mejora visual obligatoria del reporte:
   `
 }
 
+// Prompt para datos estructurados (JSON) orientados a gráficas
+function buildDataPrompt({ isPremium, lat, lng, extras }) {
+  return `Eres un asistente agrícola. Devuelve EXCLUSIVAMENTE un objeto JSON válido con este esquema:
+{
+  "summary": [{"title": string, "value": number, "unit": string}],
+  "crops": [{
+    "name": string,
+    "score": number,            // 0-100 viabilidad
+    "water": number,            // litros/semana por planta aprox
+    "sunHours": number,         // horas de sol diarias
+    "fertilization": number,    // índice 0-100 (intensidad relativa)
+    "pests": [string]
+  }],
+  "timeline": [{"month": string, "sowing": number, "harvest": number}], // 0-100
+  "recommendations": [{"label": string, "level": number}] // 0-100
+}
+Coordenadas: (${lat}, ${lng}). ${extras?.dimensions ? `Dimensiones: ${extras.dimensions}.` : ''} ${extras?.shape ? `Terreno: ${extras.shape}.` : ''}
+No agregues texto fuera del JSON, ni comentarios.`
+}
+
 export async function generateReport(req, res) {
   try {
     const token = req.cookies?.[COOKIE_NAME]
@@ -86,6 +106,56 @@ export async function generateReport(req, res) {
     console.error('generateReport error', err)
     const detail = process.env.NODE_ENV === 'production' ? '' : ` (${err?.message || 'error'})`
     return res.status(500).json({ message: `No se pudo generar el reporte${detail}` })
+  }
+}
+
+// Nuevo endpoint: Markdown + JSON para gráficas
+export async function generateReportWithData(req, res) {
+  try {
+    const token = req.cookies?.[COOKIE_NAME]
+    if (!token) return res.status(401).json({ message: 'No autenticado' })
+    const payload = verifyToken(token)
+    const user = await User.findById(payload.sub)
+    if (!user) return res.status(401).json({ message: 'No autenticado' })
+
+    const { lat, lng, extras } = req.body || {}
+    if (typeof lat !== 'number' || typeof lng !== 'number') {
+      return res.status(400).json({ message: 'Coordenadas inválidas' })
+    }
+
+    const apiKey = process.env.GOOGLE_API_KEY
+    if (!apiKey) return res.status(500).json({ message: 'Falta GOOGLE_API_KEY en el servidor' })
+    const genAI = new GoogleGenerativeAI(apiKey)
+    const modelName = process.env.GOOGLE_MODEL || 'gemini-2.5-flash'
+
+    // 1) Reporte en Markdown
+    const modelMd = genAI.getGenerativeModel({ model: modelName })
+    const promptMd = buildPrompt({ isPremium: !!user.isPremium, lat, lng, extras })
+    const resultMd = await modelMd.generateContent(promptMd)
+    const report = resultMd?.response?.text?.() || ''
+
+    // 2) Datos estructurados en JSON para gráficas
+    const modelJson = genAI.getGenerativeModel({ model: modelName })
+    const promptJson = buildDataPrompt({ isPremium: !!user.isPremium, lat, lng, extras })
+    const resultJson = await modelJson.generateContent(promptJson)
+    let data = {}
+    const raw = resultJson?.response?.text?.() || '{}'
+    try {
+      // Si el modelo devuelve bloques en ```json, quita envolturas
+      const cleaned = raw
+        .replace(/^```json\n?/i, '')
+        .replace(/\n?```$/i, '')
+      data = JSON.parse(cleaned)
+    } catch (e) {
+      console.warn('AI JSON parse failed, returning empty object')
+      data = {}
+    }
+
+    return res.json({ report, data })
+  } catch (err) {
+    console.error('generateReportWithData error', err)
+    const detail = process.env.NODE_ENV === 'production' ? '' : ` (${err?.message || 'error'})`
+    return res.status(500).json({ message: `No se pudo generar el reporte con datos${detail}` })
   }
 }
 

@@ -1,14 +1,14 @@
-import React, { useState, useRef } from 'react'
+﻿import React, { useState, useRef, useEffect } from 'react'
 import Navbar from '../components/Navbar'
 import Map from '../components/Map'
 import { useAuth } from '../hooks/useAuth'
 import './dashboard.css'
 import { createCheckoutSession, confirmCheckoutSession } from '../services/stripe'
-import { useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { generateAIReport } from '../services/ai'
+import { generateAIReport, generateAIReportWithData } from '../services/ai'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import VisualDashboard from '../components/VisualDashboard'
 
 export default function Dashboard() {
   const { user } = useAuth()
@@ -18,6 +18,7 @@ export default function Dashboard() {
   const [dimensions, setDimensions] = useState('')
   const [shape, setShape] = useState('Irregular')
   const [report, setReport] = useState('')
+  const [visualData, setVisualData] = useState(null)
   const [reportLoading, setReportLoading] = useState(false)
   const [reportError, setReportError] = useState('')
   const [downloading, setDownloading] = useState(false)
@@ -27,7 +28,9 @@ export default function Dashboard() {
     'La rotación de cultivos ayuda a mantener la salud del suelo y reduce plagas.',
     'El pH del suelo influye en la disponibilidad de nutrientes para las plantas.',
     'El riego por goteo puede ahorrar hasta un 50% de agua frente al riego tradicional.',
-    'La materia orgánica mejora la retención de agua y la estructura del suelo.'
+    'La materia orgánica mejora la retención de agua y la estructura del suelo.',
+    'Maiz en japonés トウモロコシ (toumorokoshi) significa "maíz dulce".',
+    'El compostaje reduce residuos y enriquece el suelo con nutrientes esenciales.'
   ]
   const [factIndex, setFactIndex] = useState(0)
 
@@ -103,8 +106,6 @@ export default function Dashboard() {
                 onClick={async () => {
                   try {
                     const data = await createCheckoutSession()
-                    if (data?.url) {
-                      window.location.href = data.url
                     } else {
                       console.error('No session URL returned')
                     }
@@ -149,7 +150,8 @@ export default function Dashboard() {
                     if (!coords) { setReportError('Selecciona una ubicación en el mapa.'); return }
                     try {
                       setReportLoading(true)
-                      const { report: r } = await generateAIReport({ lat: coords.lat, lng: coords.lng, extras: { dimensions, shape } })
+                      const { report: r, data } = await generateAIReportWithData({ lat: coords.lat, lng: coords.lng, extras: { dimensions, shape } })
+                      setVisualData(data)
                       setReportLoading(false)
                       setReport(r)
                     } catch (err) {
@@ -210,7 +212,7 @@ export default function Dashboard() {
                           .replace(/\u200B/g, "")
                           .replace(/[Øßþ§¤]/g, "")
                           .replace(/&{2,}/g, " ")
-                          .replace(/[^\u00C0-\u00FF\x20-\x7E\n#*]/g, "")
+                          .replace(/[^ -\u007F]/g, "")
                           .replace(/\s{2,}/g, " ")
                           .trim();
                       };
@@ -439,6 +441,10 @@ export default function Dashboard() {
                 </button>
 
               </div>
+
+              {visualData && (
+                <VisualDashboard report={report} data={visualData} />
+              )}
             </>
           )}
         </section>
@@ -446,4 +452,156 @@ export default function Dashboard() {
     </div>
   )
 }
+                                        const drawListItem = (text) => {
+                                          const parts = text.split(/(\*\*[^*]+?\*\*|\*[^*]+?\*)/);
+                                          let prefix = "• ";
+
+                                          parts.forEach((part, index) => {
+                                            if (!part) return;
+
+                                            const boldMatch =
+                                              /^\*\*(.*?)\*\*$/.exec(part) || /^\*(.*?)\*$/.exec(part);
+
+                                            const content = sanitize(boldMatch ? boldMatch[1] : part);
+                                            const lines = doc.splitTextToSize(content, usableWidth - 20);
+
+                                            lines.forEach((line, i) => {
+                                              addPageIfNeeded(lineHeight);
+                                              doc.setFont("helvetica", boldMatch ? "bold" : "normal");
+
+                                              const bullet = i === 0 && index === 0 ? prefix : "  ";
+                                              doc.text(bullet + line, marginX, y);
+
+                                              y += lineHeight;
+                                            });
+                                          });
+                                        };
+
+                                        /* ------------------------------------------------------------
+                                        *  TABLAS
+                                        * ------------------------------------------------------------ */
+                                        const drawTable = (rows) => {
+                                          if (!rows.length) return;
+
+                                          const head = [rows[0].map((c) => sanitize(c))];
+                                          const body = rows.slice(1).map((r) => r.map((c) => sanitize(c)));
+
+                                          addPageIfNeeded(30);
+
+                                          autoTable(doc, {
+                                            head,
+                                            body,
+                                            startY: y,
+                                            margin: { left: marginX, right: marginX },
+                                            styles: { font: "helvetica", fontSize: 10, cellPadding: 4 },
+                                            headStyles: {
+                                              fillColor: [240, 240, 240],
+                                              textColor: 0,
+                                              fontStyle: "bold",
+                                            },
+                                          });
+
+                                          y = doc.lastAutoTable.finalY + 8;
+                                        };
+
+                                        /* ------------------------------------------------------------
+                                        *  PROCESAMIENTO DEL REPORTE
+                                        * ------------------------------------------------------------ */
+                                        addHeader();
+
+                                        const lines = report.split(/\r?\n/);
+                                        let tableBuf = [];
+
+                                        const isAlignRow = (cells) =>
+                                          cells.every((c) => /^:?-{3,}:?$/.test(c.trim()));
+
+                                        const flushTable = () => {
+                                          if (tableBuf.length) {
+                                            drawTable(tableBuf);
+                                            tableBuf = [];
+                                          }
+                                        };
+
+                                        for (let raw of lines) {
+                                          let line = raw.trim();
+
+                                          if (!line) {
+                                            flushTable();
+                                            y += 4;
+                                            continue;
+                                          }
+
+                                          // Corrige casos como "Pimentón- **Siembra"
+                                          line = line.replace(/([A-Za-zÁÉÍÓÚáéíóúñ])-(\s*\*\*)/g, "$1 - $2");
+
+                                          // TABLAS
+                                          if (/^\|.*\|$/.test(line)) {
+                                            const cells = line.split("|").slice(1, -1);
+                                            if (!isAlignRow(cells)) tableBuf.push(cells);
+                                            continue;
+                                          } else {
+                                            flushTable();
+                                          }
+
+                                          // ENCABEZADOS
+                                          const headerMatch =
+                                            /^(#{1,6})\s+([^-\n]+?)(?:\s+-\s+(.*))?$/.exec(line);
+
+                                          if (headerMatch) {
+                                            const level = headerMatch[1].length;
+                                            const title = headerMatch[2];
+                                            const rest = headerMatch[3];
+
+                                            drawHeading(title, level);
+                                            if (rest) drawParagraph(rest);
+
+                                            continue;
+                                          }
+
+                                          // LISTAS
+                                          const li = /^[-*+]\s+(.*)$/.exec(line);
+                                          if (li) {
+                                            drawListItem(li[1]);
+                                            continue;
+                                          }
+
+                                          // LISTAS NUMERADAS
+                                          const nli = /^\d+\.\s+(.*)$/.exec(line);
+                                          if (nli) {
+                                            drawListItem(nli[1]);
+                                            continue;
+                                          }
+
+                                          // PÁRRAFOS NORMALES
+                                          drawParagraph(line);
+                                        }
+
+                                        flushTable();
+                                        doc.save("reporte_bloomy.pdf");
+                                      } catch (e) {
+                                        console.error("Error exportando PDF", e);
+                                        alert("No se pudo generar el PDF correctamente.");
+                                      } finally {
+                                        setDownloading(false);
+                                      }
+                                    }}
+                                  >
+                                    {downloading ? "Generando…" : "Descargar PDF"}
+                                  </button>
+
+                                </div>
+
+                                {visualData && (
+                                  <VisualDashboard report={report} data={visualData} />
+                                )}
+                              </>
+                            )}
+                          </section>
+                        </main>
+                      </div>
+                    )
+                  }
+
+
+
 
