@@ -40,12 +40,8 @@ export default function ControlPlagas() {
     <div className="consejo-section">
       <h2>Control de Plagas</h2>
       <p>Usa manejo integrado: monitoreo, barreras físicas, trampas y control biológico. Minimiza químicos para evitar resistencia.</p>
-
       <div className="charts-grid">
         <div className="chart-card"><h4>Incidencia mensual</h4><Bar data={incidenciaPorMes} options={{ responsive: true, scales: { y: { beginAtZero: true } } }} /></div>
-        <div className="chart-card"><h4>Eficacia de métodos (%)</h4><Doughnut data={eficaciaMetodos} /></div>
-        <div className="chart-card"><h4>Resistencia comparada</h4><Radar data={radarResistencia} /></div>
-        <div className="chart-card"><h4>Monitoreo semanal</h4><Line data={lineaMonitoreo} options={{ scales: { y: { beginAtZero: true } } }} /></div>
       </div>
 
       <h2 id="metodos-preventivos">Métodos preventivos</h2>
@@ -58,6 +54,9 @@ export default function ControlPlagas() {
         <li><strong>Barreras físicas:</strong> Mallas anti-insectos, trampas cromáticas y feromonas para monitoreo.</li>
         <li><strong>Manejo del microclima:</strong> Distancias y poda que reducen humedad y favorecen ventilación.</li>
       </ul>
+      <div className="charts-grid">
+        <div className="chart-card"><h4>Monitoreo semanal</h4><Line data={lineaMonitoreo} options={{ scales: { y: { beginAtZero: true } } }} /></div>
+      </div>
 
       <h2 id="control-biologico">Control biológico</h2>
       <p>Aprovecha enemigos naturales para suprimir poblaciones de plagas sin residuos químicos.</p>
@@ -68,6 +67,9 @@ export default function ControlPlagas() {
         <li><strong>Liberaciones controladas:</strong> Introducir lotes comerciales en momentos estratégicos.</li>
         <li><strong>Conservación:</strong> Flores nativas y setos proveen polen y refugio, sosteniendo poblaciones benéficas.</li>
       </ul>
+      <div className="charts-grid">
+        <div className="chart-card"><h4>Resistencia comparada</h4><Radar data={radarResistencia} /></div>
+      </div>
 
       <h2 id="insecticidas-naturales">Insecticidas naturales</h2>
       <p>Reducen impacto ambiental y riesgo de residuos, aunque deben usarse con criterio y rotar modos de acción.</p>
@@ -79,6 +81,9 @@ export default function ControlPlagas() {
         <li><strong>Compatibilidad:</strong> Validar mezcla previa y no aplicar sobre plantas estresadas.</li>
       </ul>
       <p>Siempre monitorea antes y después del tratamiento para evaluar eficacia y evitar aplicaciones innecesarias.</p>
+      <div className="charts-grid">
+        <div className="chart-card"><h4>Eficacia de métodos (%)</h4><Doughnut data={eficaciaMetodos} /></div>
+      </div>
     </div>
   )
 }

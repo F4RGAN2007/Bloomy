@@ -35,6 +35,9 @@ export default function CosechaAlmacenamiento() {
         <li><strong>Evitar humedad superficial:</strong> No cosechar con rocío abundante para reducir hongos.</li>
         <li><strong>Hora del día:</strong> Mañana fresca o atardecer para minimizar estrés térmico.</li>
       </ul>
+      <div className="charts-grid">
+        <div className="chart-card"><h4>Pérdidas en postcosecha</h4><Bar data={perdidasPostCosecha} options={{ scales: { y: { beginAtZero: true, max: 10 } } }} /></div>
+      </div>
 
       <h2 id="cosecha-tecnicas">Técnicas de recolección</h2>
       <p>La manipulación cuidadosa conserva integridad del producto y reduce clasificación posterior.</p>
@@ -60,7 +63,6 @@ export default function CosechaAlmacenamiento() {
       </ul>
       <p>La combinación de cosecha cuidadosa y cadena de frío eficiente puede reducir mermas postcosecha de 30% a un nivel inferior al 10%, mejorando rentabilidad y calidad percibida.</p>
       <div className="charts-grid">
-        <div className="chart-card"><h4>Pérdidas en postcosecha</h4><Bar data={perdidasPostCosecha} options={{ scales: { y: { beginAtZero: true, max: 10 } } }} /></div>
         <div className="chart-card"><h4>Ocupación de cámara (%)</h4><Doughnut data={ocupacionCamara} /></div>
       </div>
     </section>
