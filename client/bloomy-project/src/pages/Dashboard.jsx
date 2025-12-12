@@ -1,14 +1,170 @@
-﻿import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef } from 'react'
 import Navbar from '../components/Navbar'
 import Map from '../components/Map'
 import { useAuth } from '../hooks/useAuth'
 import './dashboard.css'
 import { createCheckoutSession, confirmCheckoutSession } from '../services/stripe'
+import { useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { generateAIReport, generateAIReportWithData } from '../services/ai'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import VisualDashboard from '../components/VisualDashboard'
+import { Chart as ChartJS, ArcElement, CategoryScale, LinearScale, BarElement, Tooltip, Legend } from 'chart.js'
+import { Bar } from 'react-chartjs-2'
+import './visual-dashboard.css'
+
+ChartJS.register(ArcElement, CategoryScale, LinearScale, BarElement, Tooltip, Legend)
+
+function VisualDashboard({ data }) {
+  if (!data || !data.cultivos) return null
+
+  // Removed: Niveles (doughnut) and Horas de Sol single-value chart
+
+  const riegoSemanalData = {
+    labels: ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4', 'Sem 5', 'Sem 6'],
+    datasets: [{
+      label: 'Litros/m²',
+      data: (data.riego?.semanalLitrosPorM2 || []).slice(0,6),
+      backgroundColor: '#3B82F6'
+    }]
+  }
+
+  const fertSemanalData = {
+    labels: ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4', 'Sem 5', 'Sem 6'],
+    datasets: [{
+      label: 'Índice',
+      data: (data.fertilizacion?.semanalIndice || []).slice(0,6),
+      backgroundColor: '#10B981'
+    }]
+  }
+
+  const solSemanalData = {
+    labels: ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4', 'Sem 5', 'Sem 6'],
+    datasets: [{
+      label: 'Horas',
+      data: (data.clima?.semanalHorasSol || []).slice(0,6),
+      backgroundColor: '#F59E0B'
+    }]
+  }
+
+  const distribucionData = {
+    labels: (data.distribucion?.porcentajesZona || []).map(z => z.zona),
+    datasets: [{
+      label: '% Zona',
+      data: (data.distribucion?.porcentajesZona || []).map(z => z.porcentaje),
+      backgroundColor: ['#3B82F6','#10B981','#F59E0B','#EC4899','#8B5CF6']
+    }]
+  }
+
+  // Removed: Doughnut plagas por riesgo
+
+  return (
+    <div className="visual-dashboard">
+      {/* Cultivos Recomendados */}
+      <div className="dashboard-section cultivos">
+        <h3>Cultivos recomendados</h3>
+        <div className="cultivos-grid">
+          {(data.cultivos || []).slice(0, 5).map((c, i) => (
+            <div key={i} className="cultivo-card">
+              <div className="icono">{c.icono || '🌱'}</div>
+              <div className="titulo">{c.nombre}</div>
+              <div className="metricas">
+                <span>Viabilidad: {c.viabilidad ?? 'N/D'}%</span>
+                <span>Rendimiento: {c.rendimiento || 'N/D'}</span>
+                <span>Ciclo: {c.ciclo || 'N/D'}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Indicadores Clave */}
+      <div className="dashboard-section indicators">
+        <div className="indicator-card">
+          <h4>💧 Riego</h4>
+          <p className="big-number">{data.riego?.frecuencia || 'N/D'}</p>
+          <small>{data.riego?.metodo}</small>
+        </div>
+        <div className="indicator-card">
+          <h4>🧪 Fertilización</h4>
+          <p className="big-number">{data.fertilizacion?.tipo || 'N/D'}</p>
+          <small>{data.fertilizacion?.frecuencia}</small>
+        </div>
+        <div className="indicator-card">
+          <h4>☀️ Horas de Sol</h4>
+          <p className="big-number">{data.clima?.horasSol || 0}h</p>
+          <small>Promedio diario</small>
+        </div>
+        <div className="indicator-card">
+          <h4>🌡️ Temperatura</h4>
+          <p className="big-number">{data.clima?.temperaturaMedia || 0}°C</p>
+          <small>Media anual</small>
+        </div>
+      </div>
+
+      {/* Gráfica de Niveles */}
+      <div className="dashboard-section charts">
+        {/* Removed unclear charts */}
+        <div className="chart-card">
+          <h4>Riego semanal</h4>
+          <Bar data={riegoSemanalData} options={{ plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }} />
+        </div>
+        <div className="chart-card">
+          <h4>Fertilización semanal</h4>
+          <Bar data={fertSemanalData} options={{ plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }} />
+        </div>
+        <div className="chart-card">
+          <h4>Sol semanal</h4>
+          <Bar data={solSemanalData} options={{ plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 12 } } }} />
+        </div>
+        <div className="chart-card">
+          <h4>Distribución por zonas</h4>
+          <Bar data={distribucionData} options={{ plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 100 } } }} />
+        </div>
+        {/* Removed plagas doughnut */}
+      </div>
+
+      {/* Plagas y Cosecha */}
+      <div className="dashboard-section plagas">
+        <h3>Plagas comunes</h3>
+        <div className="plagas-grid">
+          {(data.plagas || []).map((p, i) => (
+            <div key={i} className="plaga-card">
+              <div className="plaga-header">🐛 {p.nombre}</div>
+              <div className="plaga-body">
+                <span>Riesgo: {p.riesgo}</span>
+                <span>Control: {p.control}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Distribución de siembra */}
+      <div className="dashboard-section distribucion">
+        <h3>Distribución recomendada de siembra</h3>
+        <div className="distribucion-grid">
+          <div className="dist-card"><strong>Densidad:</strong> {data.distribucion?.densidad || 'N/D'}</div>
+          <div className="dist-card"><strong>Espaciamiento:</strong> {data.distribucion?.espaciamiento || 'N/D'}</div>
+          <div className="dist-card"><strong>Disposición:</strong> {data.distribucion?.disposicion || 'N/D'}</div>
+        </div>
+      </div>
+
+      {/* Cronograma Visual */}
+      <div className="dashboard-section cronograma">
+        <h3>Cronograma</h3>
+        <div className="cronograma-strip">
+          {(data.cronograma || []).map((c, i) => (
+            <div key={i} className={`cronograma-item tipo-${c.tipo}`}>
+              <div className="mes">{c.mes}</div>
+              <div className="actividad">{c.actividad}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function Dashboard() {
   const { user } = useAuth()
@@ -18,7 +174,7 @@ export default function Dashboard() {
   const [dimensions, setDimensions] = useState('')
   const [shape, setShape] = useState('Irregular')
   const [report, setReport] = useState('')
-  const [visualData, setVisualData] = useState(null)
+  const [data, setData] = useState(null)
   const [reportLoading, setReportLoading] = useState(false)
   const [reportError, setReportError] = useState('')
   const [downloading, setDownloading] = useState(false)
@@ -28,9 +184,7 @@ export default function Dashboard() {
     'La rotación de cultivos ayuda a mantener la salud del suelo y reduce plagas.',
     'El pH del suelo influye en la disponibilidad de nutrientes para las plantas.',
     'El riego por goteo puede ahorrar hasta un 50% de agua frente al riego tradicional.',
-    'La materia orgánica mejora la retención de agua y la estructura del suelo.',
-    'Maiz en japonés トウモロコシ (toumorokoshi) significa "maíz dulce".',
-    'El compostaje reduce residuos y enriquece el suelo con nutrientes esenciales.'
+    'La materia orgánica mejora la retención de agua y la estructura del suelo.'
   ]
   const [factIndex, setFactIndex] = useState(0)
 
@@ -70,6 +224,8 @@ export default function Dashboard() {
       <main className="dashboard">
         <section className="ia-report-section">
           <h2>Reporte de IA</h2>
+          {/* Visual summary when data is available */}
+          {data && <VisualDashboard data={data} />}
           {!report && !reportLoading && (
             <p>Selecciona una ubicación en el mapa y pulsa "Generar Reporte" para obtener recomendaciones personalizadas.</p>
           )}
@@ -106,6 +262,8 @@ export default function Dashboard() {
                 onClick={async () => {
                   try {
                     const data = await createCheckoutSession()
+                    if (data?.url) {
+                      window.location.href = data.url
                     } else {
                       console.error('No session URL returned')
                     }
@@ -123,9 +281,10 @@ export default function Dashboard() {
                   if (!coords) { setReportError('Selecciona una ubicación en el mapa.'); return }
                   try {
                     setReportLoading(true)
-                    const { report: r } = await generateAIReport({ lat: coords.lat, lng: coords.lng })
+                    const { report: r, data: d } = await generateAIReportWithData({ lat: coords.lat, lng: coords.lng })
                     setReportLoading(false)
                     setReport(r)
+                    setData(d || null)
                   } catch (err) {
                     setReportLoading(false)
                     setReportError(err?.response?.data?.message || 'No se pudo generar el reporte')
@@ -141,7 +300,7 @@ export default function Dashboard() {
               <div className="input-group">
                 <div className="field">
                   <label htmlFor="dimensions">Dimensiones del terreno (m²)</label>
-                  <input value={dimensions} onChange={(e)=>setDimensions(e.target.value)} type="text" id="dimensions" placeholder="Ej: 20x20 ?" />
+                  <input value={dimensions} onChange={(e)=>setDimensions(e.target.value)} type="text" id="dimensions" placeholder="Ej: 20x20" />
                 </div>
                 <button
                   className="btn-accent"
@@ -150,10 +309,10 @@ export default function Dashboard() {
                     if (!coords) { setReportError('Selecciona una ubicación en el mapa.'); return }
                     try {
                       setReportLoading(true)
-                      const { report: r, data } = await generateAIReportWithData({ lat: coords.lat, lng: coords.lng, extras: { dimensions, shape } })
-                      setVisualData(data)
+                      const { report: r, data: d } = await generateAIReportWithData({ lat: coords.lat, lng: coords.lng, extras: { dimensions, shape } })
                       setReportLoading(false)
                       setReport(r)
+                      setData(d || null)
                     } catch (err) {
                       setReportLoading(false)
                       setReportError(err?.response?.data?.message || 'No se pudo generar el reporte')
@@ -212,7 +371,7 @@ export default function Dashboard() {
                           .replace(/\u200B/g, "")
                           .replace(/[Øßþ§¤]/g, "")
                           .replace(/&{2,}/g, " ")
-                          .replace(/[^ -\u007F]/g, "")
+                          .replace(/[^\u00C0-\u00FF\x20-\x7E\n#*]/g, "")
                           .replace(/\s{2,}/g, " ")
                           .trim();
                       };
@@ -441,10 +600,6 @@ export default function Dashboard() {
                 </button>
 
               </div>
-
-              {visualData && (
-                <VisualDashboard report={report} data={visualData} />
-              )}
             </>
           )}
         </section>
@@ -452,156 +607,4 @@ export default function Dashboard() {
     </div>
   )
 }
-                                        const drawListItem = (text) => {
-                                          const parts = text.split(/(\*\*[^*]+?\*\*|\*[^*]+?\*)/);
-                                          let prefix = "• ";
-
-                                          parts.forEach((part, index) => {
-                                            if (!part) return;
-
-                                            const boldMatch =
-                                              /^\*\*(.*?)\*\*$/.exec(part) || /^\*(.*?)\*$/.exec(part);
-
-                                            const content = sanitize(boldMatch ? boldMatch[1] : part);
-                                            const lines = doc.splitTextToSize(content, usableWidth - 20);
-
-                                            lines.forEach((line, i) => {
-                                              addPageIfNeeded(lineHeight);
-                                              doc.setFont("helvetica", boldMatch ? "bold" : "normal");
-
-                                              const bullet = i === 0 && index === 0 ? prefix : "  ";
-                                              doc.text(bullet + line, marginX, y);
-
-                                              y += lineHeight;
-                                            });
-                                          });
-                                        };
-
-                                        /* ------------------------------------------------------------
-                                        *  TABLAS
-                                        * ------------------------------------------------------------ */
-                                        const drawTable = (rows) => {
-                                          if (!rows.length) return;
-
-                                          const head = [rows[0].map((c) => sanitize(c))];
-                                          const body = rows.slice(1).map((r) => r.map((c) => sanitize(c)));
-
-                                          addPageIfNeeded(30);
-
-                                          autoTable(doc, {
-                                            head,
-                                            body,
-                                            startY: y,
-                                            margin: { left: marginX, right: marginX },
-                                            styles: { font: "helvetica", fontSize: 10, cellPadding: 4 },
-                                            headStyles: {
-                                              fillColor: [240, 240, 240],
-                                              textColor: 0,
-                                              fontStyle: "bold",
-                                            },
-                                          });
-
-                                          y = doc.lastAutoTable.finalY + 8;
-                                        };
-
-                                        /* ------------------------------------------------------------
-                                        *  PROCESAMIENTO DEL REPORTE
-                                        * ------------------------------------------------------------ */
-                                        addHeader();
-
-                                        const lines = report.split(/\r?\n/);
-                                        let tableBuf = [];
-
-                                        const isAlignRow = (cells) =>
-                                          cells.every((c) => /^:?-{3,}:?$/.test(c.trim()));
-
-                                        const flushTable = () => {
-                                          if (tableBuf.length) {
-                                            drawTable(tableBuf);
-                                            tableBuf = [];
-                                          }
-                                        };
-
-                                        for (let raw of lines) {
-                                          let line = raw.trim();
-
-                                          if (!line) {
-                                            flushTable();
-                                            y += 4;
-                                            continue;
-                                          }
-
-                                          // Corrige casos como "Pimentón- **Siembra"
-                                          line = line.replace(/([A-Za-zÁÉÍÓÚáéíóúñ])-(\s*\*\*)/g, "$1 - $2");
-
-                                          // TABLAS
-                                          if (/^\|.*\|$/.test(line)) {
-                                            const cells = line.split("|").slice(1, -1);
-                                            if (!isAlignRow(cells)) tableBuf.push(cells);
-                                            continue;
-                                          } else {
-                                            flushTable();
-                                          }
-
-                                          // ENCABEZADOS
-                                          const headerMatch =
-                                            /^(#{1,6})\s+([^-\n]+?)(?:\s+-\s+(.*))?$/.exec(line);
-
-                                          if (headerMatch) {
-                                            const level = headerMatch[1].length;
-                                            const title = headerMatch[2];
-                                            const rest = headerMatch[3];
-
-                                            drawHeading(title, level);
-                                            if (rest) drawParagraph(rest);
-
-                                            continue;
-                                          }
-
-                                          // LISTAS
-                                          const li = /^[-*+]\s+(.*)$/.exec(line);
-                                          if (li) {
-                                            drawListItem(li[1]);
-                                            continue;
-                                          }
-
-                                          // LISTAS NUMERADAS
-                                          const nli = /^\d+\.\s+(.*)$/.exec(line);
-                                          if (nli) {
-                                            drawListItem(nli[1]);
-                                            continue;
-                                          }
-
-                                          // PÁRRAFOS NORMALES
-                                          drawParagraph(line);
-                                        }
-
-                                        flushTable();
-                                        doc.save("reporte_bloomy.pdf");
-                                      } catch (e) {
-                                        console.error("Error exportando PDF", e);
-                                        alert("No se pudo generar el PDF correctamente.");
-                                      } finally {
-                                        setDownloading(false);
-                                      }
-                                    }}
-                                  >
-                                    {downloading ? "Generando…" : "Descargar PDF"}
-                                  </button>
-
-                                </div>
-
-                                {visualData && (
-                                  <VisualDashboard report={report} data={visualData} />
-                                )}
-                              </>
-                            )}
-                          </section>
-                        </main>
-                      </div>
-                    )
-                  }
-
-
-
 
