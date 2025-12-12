@@ -108,7 +108,7 @@ const Navbar = () => {
             {isDashboard && isPremium && !isConsejos && (
               <button
                 className="navbar-link"
-                onClick={() => navigate('/consejos')}
+                onClick={() => { navigate('/consejos') }}
               >
                 Consejos
               </button>
